@@ -6,16 +6,19 @@ if (socket.readyState != WebSocket.OPEN) return;
 socket.send(JSON.stringify(payload));   
 }
 
-function broadcast(wss , payload){
-if (wss.readyState != WebSocket.OPEN) return;
-
-wss.send(JSON.stringify(payload));    
+function broadcast(wss, payload) {
+  const message = JSON.stringify(payload);
+  for (const client of wss.clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  }
 }
 
 export function attachWebSocketServer(server){
     const wss = new WebSocketServer({
         server, 
-        payload:"/ws",
+        path:"/ws",
         maxPayload:1024*1024
     }); 
     wss.on("connection" , (socket)=>{
