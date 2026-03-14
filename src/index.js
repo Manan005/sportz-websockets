@@ -1,56 +1,31 @@
-import { eq } from "drizzle-orm";
-import { db, pool } from ".src/db/db.js";
-import { demoUsers } from "..src/db/schema.js";
+import express from "express";
+import { matchRouter } from "./routes/matches.js";
+import http from "http";
+import { attachWebSocketServer } from "./ws/server.js";
 
-async function main() {
-  try {
-    console.log("Performing CRUD operations...");
+const PORT = Number(process.env.PORT || 8000);
+const HOST = process.env.HOST || "0.0.0.0" ;
+const app = express();
 
-    // CREATE: Insert a new user
-    const [newUser] = await db
-      .insert(demoUsers)
-      .values({ name: "Admin User", email: "admin@example.com" })
-      .returning();
+// JSON middleware
+app.use(express.json());
 
-    if (!newUser) {
-      throw new Error("Failed to create user");
-    }
+const server = http.createServer(app);
+// Root GET route
+app.get("/", (req, res) => {
+  res.send("Hello from express");
+});
 
-    console.log("✅ CREATE: New user created:", newUser);
+app.use("/matches", matchRouter);
 
-    // READ: Select the user
-    const foundUser = await db
-      .select()
-      .from(demoUsers)
-      .where(eq(demoUsers.id, newUser.id));
-    console.log("✅ READ: Found user:", foundUser[0]);
+const {broadCastMatchCreated} = attachWebSocketServer(server);
+// Start server
+app.locals.broadCastMatchCreated = broadCastMatchCreated;
 
-    // UPDATE: Change the user's name
-    const [updatedUser] = await db
-      .update(demoUsers)
-      .set({ name: "Super Admin" })
-      .where(eq(demoUsers.id, newUser.id))
-      .returning();
+server.listen(PORT,HOST,()=>{
+  const baseUrl = HOST === "0.0.0.0" ? `http://localhost${PORT}`:`http://${HOST}:${PORT}`;
+  console.log(`Server running on ${baseUrl}`);
+  console.log(`Websocket Server is running on ${baseUrl.replace("http", "ws")}/ws`);
+});
 
-    if (!updatedUser) {
-      throw new Error("Failed to update user");
-    }
 
-    console.log("✅ UPDATE: User updated:", updatedUser);
-
-    // DELETE: Remove the user
-    await db.delete(demoUsers).where(eq(demoUsers.id, newUser.id));
-    console.log("✅ DELETE: User deleted.");
-
-    console.log("\nCRUD operations completed successfully.");
-  } catch (error) {
-    console.error("❌ Error performing CRUD operations:", error);
-    process.exit(1);
-  } finally {
-    // End the pool connection
-    await pool.end();
-    console.log("Database pool closed.");
-  }
-}
-
-main();
