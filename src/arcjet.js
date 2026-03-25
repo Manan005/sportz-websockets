@@ -1,7 +1,11 @@
-import arcjet, {detectBot, shield, slidingWindow} from "@arcjet/node";
+import 'dotenv/config';
 
 const arcjetKey = process.env.ARCJET_KEY;
-const arcjetMode = process.env.ARCJET_MODE === 'DRY_RUN' ? 'DRY_RUN' : 'LIVE';
+if (!['DRY_RUN', 'LIVE'].includes(process.env.ARCJET_MODE)) {
+    console.error('Invalid ARCJET_MODE. Must be either DRY_RUN or LIVE.');
+    process.exit(1);
+}
+const arcjetMode = process.env.ARCJET_MODE;
 
 if(!arcjetKey) throw new Error('ARCJET_KEY environment variable is missing.');
 
